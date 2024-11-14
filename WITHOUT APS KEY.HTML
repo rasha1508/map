@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Venue Map Widget</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Dancing+Script:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Include Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      body {
+        font-family: "Playfair Display", serif;
+        background-color: transparent;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+
+      .widget-container {
+        background-color: #fffaf2;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      h1 {
+        font-family: "Dancing Script", cursive;
+        font-size: 2.5em;
+        color: #a67b5b;
+        margin-bottom: 15px;
+      }
+
+      input {
+        font-size: 1em;
+        padding: 10px;
+        border: 1px solid #a67b5b;
+        border-radius: 5px;
+        background-color: #fbf8f4;
+        margin: 10px 0;
+        color: #a67b5b;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      input::placeholder {
+        color: #a67b5b;
+        font-family: "Playfair Display", serif;
+        font-size: 1em;
+      }
+
+      button {
+        font-family: "Playfair Display", serif;
+        font-size: 1em;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #a67b5b;
+        color: white;
+        cursor: pointer;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button:hover {
+        opacity: 0.9;
+      }
+
+      #map {
+        width: 100%;
+        height: 350px;
+        margin-top: 15px;
+        border-radius: 10px;
+      }
+
+      .venue-address {
+        font-size: 1.2em;
+        color: #a67b5b;
+        margin-top: 15px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="widget-container">
+      <h1>Find the Venue</h1>
+      <input type="text" id="venue-address" placeholder="Enter venue address" />
+      <button id="find-venue-button">Show Map</button>
+      <div id="map"></div>
+      <div
+        id="address-display"
+        class="venue-address"
+        style="display: none"
+      ></div>
+    </div>
+
+    <!-- Include Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      const addressInput = document.getElementById("venue-address");
+      const findButton = document.getElementById("find-venue-button");
+      const mapContainer = document.getElementById("map");
+      const addressDisplay = document.getElementById("address-display");
+
+      // Initialize Leaflet map
+      const map = L.map(mapContainer).setView([51.505, -0.09], 13); // Default location: London
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",
+      }).addTo(map);
+
+      let marker;
+
+      // Function to update map and address
+      async function updateMap(address) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            address
+          )}`;
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.length === 0) {
+            alert("Address not found. Please check the address format.");
+            return;
+          }
+
+          const { lat, lon, display_name } = data[0];
+          const latLng = [parseFloat(lat), parseFloat(lon)];
+
+          // Update map
+          map.setView(latLng, 13);
+          if (marker) {
+            marker.setLatLng(latLng);
+          } else {
+            marker = L.marker(latLng).addTo(map);
+          }
+
+          // Hide input and button
+          findButton.style.display = "none";
+          addressInput.style.display = "none";
+
+          // Show address display
+          addressDisplay.style.display = "block";
+          addressDisplay.textContent = `Venue Address: ${display_name}`;
+        } catch (error) {
+          console.error("Error updating map:", error);
+          alert(
+            "An error occurred while processing the address. Please try again."
+          );
+        }
+      }
+
+      // Load saved address from localStorage
+      const savedAddress = localStorage.getItem("venueAddress");
+      if (savedAddress) {
+        addressInput.value = savedAddress;
+        updateMap(savedAddress);
+      }
+
+      // Event listener for button click
+      findButton.addEventListener("click", () => {
+        const address = addressInput.value.trim();
+
+        if (!address) {
+          alert("Please enter a venue address.");
+          return;
+        }
+
+        // Save address to localStorage
+        localStorage.setItem("venueAddress", address);
+
+        updateMap(address);
+      });
+    </script>
+  </body>
+</html>
